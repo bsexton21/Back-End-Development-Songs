@@ -51,3 +51,70 @@ def parse_json(data):
 ######################################################################
 # INSERT CODE HERE
 ######################################################################
+
+# RETURN HEALTH OF THE APP
+
+@app.route("/health")
+def health():
+    return jsonify(dict(status="OK")), 200
+
+# COUNT THE NUMBER OF DOCUMENTS
+
+@app.route("/count")
+def count():
+    """return length of data"""
+    count = db.songs.count_documents({})
+    return jsonify({"count":count}), 200
+
+# RETURN ALL SONGS
+
+@app.route("/song")
+def songs():
+    listofsongs = db.songs.find({})
+    return jsonify({"songs":parse_json(listofsongs)}), 200
+
+# RETURN SONG BY ID
+
+@app.route("/song/<int:id>")
+def get_song_by_id(id):
+    song = db.songs.find_one({"id":id})
+    if song:
+        return jsonify({"songs":parse_json(song)}), 200
+    return ({"message":"song with id not found"}), 404
+
+# CREATE A SONG
+
+@app.route("/song", methods=["POST"])
+def create_song():
+    new_song = request.json
+    print(new_song["id"])
+    test=db.songs.find_one({"id":new_song["id"]})
+    if test:
+        return {"Message":f"song with id {new_song['id']} already present"}, 302
+    insert_id: InsertOneResult = db.songs.insert_one(new_song)
+    return jsonify({"inserted id":parse_json(insert_id,inserted_id)}), 201
+
+# UPDATE A SONG
+
+@app.route("/song/<int:id>", methods=["PUT"])
+def update_song(id):
+    change_song = request.json
+    test=db.songs.find_one({"id":id})
+    if test == None:
+        return {"Message":"song not found"}, 404
+    new_data = {"$set":change_song}
+    result=db.songs.update_one({"id":id}, new_data)
+    if result.modified_count == 0:
+        return {"message": "song found, but nothing updated"}, 200
+    else:
+        return jsonify(parse_json(db.songs.find_one({"id":id}))),201
+
+# DELETE A SONG
+
+@app.route("/song/<int:id>", methods=["DELETE"])
+def delete_song(id):
+    result=db.songs.delete_one({"id":id})
+    if result.deleted_count == 0:
+        return {"Message":"song not found"}, 404
+    else:
+        return "", 204
